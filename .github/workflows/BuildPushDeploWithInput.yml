@@ -1,14 +1,40 @@
-name: Build and Push Docker Image to ECR
+name: Build and Push Docker Image to ECR + Deploy on EKS
 
 on:
-  # workflow_dispatch:
-  #   inputs:
-  #     run:
-  #       description: 'Run'     
+  workflow_dispatch:
+    inputs:
+      env:
+        description: 'Environment'
+        required: true
+        type: choise
+        options:
+          - prod
+          - qa
+        default: qa
+      branch:
+        decription: 'Branch/Tag'
+        required: true
+        default: qa
+      repo:
+        required: true
+        description: 'Repository'
+        type: choise
+        options:
+          - accountservice
+          - authservice
+          - BuyerGraphQL
+          - buyerservice
+          - cartservice
+          - cerberus
+          - itemsearch
+          - orderservice
+          - SupplierGraphQL
+          - supplierservice
+          - zippy
+          - ProductRecommendationService
+          - BannerService
+          - BuyerPage        
 
-  push:
-    branches:
-      - '**'
 
 jobs:
   build-and-push:
@@ -17,6 +43,9 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
+      with:
+        repository: 'kamereo/${{ github.event.inputs.repo }}'
+        ref: ${{ github.event.inputs.branch }}
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v1
@@ -34,7 +63,7 @@ jobs:
     - name: Prepare ENV
       id: build_env
       run: |
-        REPOSITORY_LC=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+        REPOSITORY_LC=$(echo "kamereo/${{ github.event.inputs.repo }}" | tr '[:upper:]' '[:lower:]')
         echo "repository_name=$(echo $REPOSITORY_LC | cut -d/ -f2)"
         echo "repository=$REPOSITORY_LC" >> "$GITHUB_OUTPUT" # steps.build_env.outputs.repository
         echo "image_tag=${{ github.sha }}" >> "$GITHUB_OUTPUT"
@@ -53,14 +82,14 @@ jobs:
         fi
 
     - name: Determine Dockerfile
+      if: steps.image_exists.outputs.exists == 'false'
       id: dockerfile
       run: |
-        echo "path=./Dockerfile" >> "$GITHUB_OUTPUT"
-        # if [ -f Dockerfile_${{ github.event.inputs.env }} ]; then
-        #   echo "path=${{ github.event.inputs.repo }}/Dockerfile_${{ github.event.inputs.env }}" >> "$GITHUB_OUTPUT"
-        # else
-        #   echo "path=${{ github.event.inputs.repo }}/Dockerfile" >> "$GITHUB_OUTPUT"
-        # fi
+        if [ -f ${{ github.event.inputs.repo }}/Dockerfile_${{ github.event.inputs.env }} ]; then
+          echo "path=${{ github.event.inputs.repo }}/Dockerfile_${{ github.event.inputs.env }}" >> "$GITHUB_OUTPUT"
+        else
+          echo "path=${{ github.event.inputs.repo }}/Dockerfile" >> "$GITHUB_OUTPUT"
+        fi
 
     - name: Build and Push Docker Image
       if: steps.image_exists.outputs.exists == 'false'
@@ -78,3 +107,4 @@ jobs:
           
         aws ecr create-repository --region ap-southeast-1 --repository-name ${{ steps.build_env.outputs.repository }} --image-tag-mutability IMMUTABLE || true
         docker push ${{ steps.build_env.outputs.image_repo }}:${{ steps.build_env.outputs.image_tag }}
+

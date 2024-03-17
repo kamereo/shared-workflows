@@ -38,7 +38,7 @@ jobs:
         echo "repository_name=$(echo $REPOSITORY_LC | cut -d/ -f2)"
         echo "repository=$REPOSITORY_LC" >> "$GITHUB_OUTPUT" # steps.build_env.outputs.repository
         echo "image_tag=${{ github.sha }}" >> "$GITHUB_OUTPUT"
-        echo "image_repo=015648027364.dkr.ecr.ap-southeast-1.amazonaws.com/$REPOSITORY_LC" "$GITHUB_OUTPUT"
+        echo "image_repo=015648027364.dkr.ecr.ap-southeast-1.amazonaws.com/$REPOSITORY_LC" >> "$GITHUB_OUTPUT"
 
     - name: Check if Docker Image Exists
       id: image_exists
@@ -74,8 +74,8 @@ jobs:
           --build-arg NPM_TOKEN=${{ secrets.NPM_TOKEN }} \
           --build-arg APP_ENV=${{ github.event.inputs.env }} \
           -f ${{ steps.dockerfile.outputs.path }} \
-          -t ${{ steps.build_env.outputs.image_repo}}:${{ steps.build_env.outputs.image_tag }} .
+          -t ${{ steps.build_env.outputs.image_repo }}:${{ steps.build_env.outputs.image_tag }} .
           
         aws ecr create-repository --region ap-southeast-1 --repository-name ${{ steps.build_env.outputs.repository }} --image-tag-mutability IMMUTABLE || true
-        docker push ${{ steps.build_env.outputs.image_repo}}:${{ steps.build_env.outputs.image_tag }}
-        docker rmi ${{ steps.build_env.outputs.image_repo}}:${{ steps.build_env.outputs.image_tag }}
+        docker push ${{ steps.build_env.outputs.image_repo }}:${{ steps.build_env.outputs.image_tag }}
+        docker rmi ${{ steps.build_env.outputs.image_repo }}:${{ steps.build_env.outputs.image_tag }}

@@ -34,7 +34,9 @@ jobs:
     - name: Prepare ENV
       id: build_env
       run: |
-        REPOSITORY=${{ github.repository }} echo "repository=${REPOSITORY,,}" >> "$GITHUB_OUTPUT" # steps.build_env.output.repository
+        REPOSITORY=${{ github.repository }} 
+        echo "${REPOSITORY,,}"
+        echo "repository=${REPOSITORY,,}" >> "$GITHUB_OUTPUT" # steps.build_env.output.repository
 
     - name: Check if Docker Image Exists
       id: image_exists

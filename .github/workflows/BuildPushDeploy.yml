@@ -34,14 +34,17 @@ jobs:
     - name: Prepare ENV
       id: build_env
       run: |
-        echo "repository=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT" # steps.build_env.outputs.repository
+        REPOSITORY_LC=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+        echo "repository_name=$(echo $REPOSITORY_LC | cut -d/ -f2)"
+        echo "repository=$REPOSITORY_LC" >> "$GITHUB_OUTPUT" # steps.build_env.outputs.repository
+        echo "image_tag=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+        echo "image_repo=015648027364.dkr.ecr.ap-southeast-1.amazonaws.com/$REPOSITORY_LC" "$GITHUB_OUTPUT"
 
     - name: Check if Docker Image Exists
       id: image_exists
       run: |
-        IMAGE_TAG=${{ github.sha }}
-        IMAGE_REPO="015648027364.dkr.ecr.ap-southeast-1.amazonaws.com/${{ steps.build_env.outputs.repository }}"
-        if aws ecr describe-images --repository-name ${{ steps.build_env.outputs.repository }} --image-ids imageTag=$IMAGE_TAG --region ap-southeast-1; then
+
+        if aws ecr describe-images --repository-name ${{ steps.build_env.outputs.repository }} --image-ids imageTag=${{ steps.build_env.outputs.image_tag }} --region ap-southeast-1; then
           echo "Image exists. Skipping build."
           echo "exists=true" >> "$GITHUB_OUTPUT"
         else
@@ -52,7 +55,7 @@ jobs:
     - name: Determine Dockerfile
       id: dockerfile
       run: |
-        echo "path=${{ steps.build_env.outputs.repository }}/Dockerfile" >> "$GITHUB_OUTPUT"
+        echo "path=./Dockerfile" >> "$GITHUB_OUTPUT"
         # if [ -f Dockerfile_${{ github.event.inputs.env }} ]; then
         #   echo "path=${{ github.event.inputs.repo }}/Dockerfile_${{ github.event.inputs.env }}" >> "$GITHUB_OUTPUT"
         # else
@@ -62,8 +65,7 @@ jobs:
     - name: Build and Push Docker Image
       if: steps.image_exists.outputs.exists == 'false'
       run: |
-        IMAGE_TAG=${{ github.sha }}
-        IMAGE_REPO="015648027364.dkr.ecr.ap-southeast-1.amazonaws.com/${{ steps.build_env.outputs.repository }}"
+
         docker build --pull \
           --build-arg AWS_DEFAULT_REGION="ap-southeast-1" \
           --build-arg AWS_ACCESS_KEY_ID \
@@ -72,8 +74,8 @@ jobs:
           --build-arg NPM_TOKEN=${{ secrets.NPM_TOKEN }} \
           --build-arg APP_ENV=${{ github.event.inputs.env }} \
           -f ${{ steps.dockerfile.outputs.path }} \
-          -t $IMAGE_REPO:$IMAGE_TAG .
+          -t ${{ steps.build_env.outputs.image_repo}}:${{ steps.build_env.outputs.image_tag }} .
           
         aws ecr create-repository --region ap-southeast-1 --repository-name ${{ steps.build_env.outputs.repository }} --image-tag-mutability IMMUTABLE || true
-        docker push $IMAGE_REPO:$IMAGE_TAG
-        docker rmi $IMAGE_REPO:$IMAGE_TAG
+        docker push ${{ steps.build_env.outputs.image_repo}}:${{ steps.build_env.outputs.image_tag }}
+        docker rmi ${{ steps.build_env.outputs.image_repo}}:${{ steps.build_env.outputs.image_tag }}

@@ -1,14 +1,14 @@
-name: Build and Push Docker Image to ECR
+name: Build and Push Docker Image to ECR + Deploy on EKS
 
 on:
-  # workflow_dispatch:
-  #   inputs:
-  #     run:
-  #       description: 'Run'     
+  workflow_dispatch:
+    inputs:
+      run:
+        description: 'Run'     
 
-  push:
-    branches:
-      - '**'
+  # push:
+  #   branches:
+  #     - '**'
 
 jobs:
   build-and-push:

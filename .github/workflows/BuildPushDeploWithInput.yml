@@ -118,8 +118,8 @@ jobs:
 
         docker build --pull \
           --build-arg AWS_DEFAULT_REGION="ap-southeast-1" \
-          --build-arg AWS_ACCESS_KEY_ID \
-          --build-arg AWS_SECRET_ACCESS_KEY \
+          --build-arg AWS_ACCESS_KEY_ID=${{ secrets.ACTION_ACCESS_KEY }} \
+          --build-arg AWS_SECRET_ACCESS_KEY=${{ secrets.ACTION_ACCESS_SECRET }} \
           --build-arg AWS_SESSION_TOKEN \
           --build-arg NPM_TOKEN=${{ secrets.NPM_TOKEN }} \
           --build-arg APP_ENV=${{ github.event.inputs.env }} \

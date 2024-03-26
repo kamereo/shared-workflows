@@ -1,4 +1,4 @@
-name: Build and Push Docker Image to ECR + Deploy on EKS
+name: CICD with input
 
 on:
   workflow_dispatch:
@@ -44,7 +44,8 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
       with:
-        ssh-key: ${{ secrets.BUILD_TOOLS_DEPLOY_KEY }}
+        #path: ${{ github.event.inputs.repo }}
+        token: ${{ secrets.GH_TOKEN }}
         repository: 'kamereo/${{ github.event.inputs.repo }}'
         ref: ${{ github.event.inputs.branch }}
 
@@ -104,10 +105,10 @@ jobs:
       if: steps.image_exists.outputs.exists == 'false'
       id: dockerfile
       run: |
-        if [ -f ${{ github.event.inputs.repo }}/Dockerfile_${{ github.event.inputs.env }} ]; then
-          echo "path=${{ github.event.inputs.repo }}/Dockerfile_${{ github.event.inputs.env }}" >> "$GITHUB_OUTPUT"
+        if [ -f Dockerfile_${{ github.event.inputs.env }} ]; then
+          echo "path=Dockerfile_${{ github.event.inputs.env }}" >> "$GITHUB_OUTPUT"
         else
-          echo "path=${{ github.event.inputs.repo }}/Dockerfile" >> "$GITHUB_OUTPUT"
+          echo "path=Dockerfile" >> "$GITHUB_OUTPUT"
         fi
 
     - name: Build and Push Docker Image

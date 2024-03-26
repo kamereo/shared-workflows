@@ -70,14 +70,14 @@ jobs:
         REPOSITORY_LC=$(echo "kamereo/${{ github.event.inputs.repo }}" | tr '[:upper:]' '[:lower:]')
         echo "repository_name=$(echo $REPOSITORY_LC | cut -d/ -f2)"
         echo "repository=$REPOSITORY_LC" >> "$GITHUB_OUTPUT" 
-        echo "image_tag=$(cd $REPOSITORY_LC && git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+        echo "image_tag=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
         echo "image_repo=015648027364.dkr.ecr.ap-southeast-1.amazonaws.com/$REPOSITORY_LC" >> "$GITHUB_OUTPUT"
         ## DEPLOY envs
         cluster_arn="arn:aws:eks:ap-southeast-1:015648027364:cluster/${{github.event.inputs.repo}}"
-        if [ -f ${{ github.event.inputs.repo }}/deployment_${{ github.event.inputs.env }}.yaml ]; then
-          helm_value_param="-f ${{ github.event.inputs.repo }}/deployment.yaml -f ${{ github.event.inputs.repo }}/deployment_${{ github.event.inputs.env }}.yaml"
+        if [ -f deployment_${{ github.event.inputs.env }}.yaml ]; then
+          helm_value_param="-f deployment.yaml -f deployment_${{ github.event.inputs.env }}.yaml"
         else
-          helm_value_param="-f ${{ github.event.inputs.repo }}/deployment.yaml"
+          helm_value_param="-f deployment.yaml"
         fi
         if [[ "${{github.event.inputs.repo}}" ~= "internal" ]]; then
           namespace=internal
@@ -139,6 +139,7 @@ jobs:
         ssh-key: ${{ secrets.BUILD_TOOLS_DEPLOY_KEY }}
         repository: 'kamereo/deployment'
         ref: master
+        path: deployment
 
     - name: Set up Helm 
       uses: azure/setup-helm@v4.1.0

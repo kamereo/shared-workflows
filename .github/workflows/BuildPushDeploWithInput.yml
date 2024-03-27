@@ -113,10 +113,18 @@ jobs:
           echo "path=Dockerfile" >> "$GITHUB_OUTPUT"
         fi
 
+    - name: Checkout build-tools
+      uses: actions/checkout@v3
+      with:
+        ssh-key: ${{ secrets.BUILD_TOOLS_DEPLOY_KEY }}
+        repository: 'kamereo/build-tools'
+        ref: master
+        path: build-tools
+
     - name: Build and Push Docker Image
       if: steps.image_exists.outputs.exists == 'false'
       run: |
-
+        cp -r build-tools/gradle-init.d gradle/
         docker build --pull \
           --build-arg AWS_DEFAULT_REGION="ap-southeast-1" \
           --build-arg AWS_ACCESS_KEY_ID=${{ secrets.ACTION_ACCESS_KEY }} \

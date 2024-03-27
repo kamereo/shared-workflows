@@ -118,7 +118,7 @@ jobs:
       with:
         ssh-key: ${{ secrets.BUILD_TOOLS_DEPLOY_KEY }}
         repository: 'kamereo/build-tools'
-        ref: master
+        ref: main
         path: build-tools
 
     - name: Build and Push Docker Image

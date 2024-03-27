@@ -27,6 +27,7 @@ on:
           - cartservice
           - cerberus
           - itemsearch
+          - internalservice
           - orderservice
           - SupplierGraphQL
           - supplierservice

@@ -74,7 +74,7 @@ jobs:
         echo "image_tag=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
         echo "image_repo=015648027364.dkr.ecr.ap-southeast-1.amazonaws.com/$REPOSITORY_LC" >> "$GITHUB_OUTPUT"
         ## DEPLOY envs
-        cluster_arn="arn:aws:eks:ap-southeast-1:015648027364:cluster/${{github.event.inputs.repo}}"
+        echo "cluster_arn=arn:aws:eks:ap-southeast-1:015648027364:cluster/${{github.event.inputs.repo}}" >> "$GITHUB_OUTPUT"
         if [ -f deployment_${{ github.event.inputs.env }}.yaml ]; then
           echo "helm_value_param=\"-f deployment.yaml -f deployment_${{ github.event.inputs.env }}.yaml\"" "$GITHUB_OUTPUT"
         else

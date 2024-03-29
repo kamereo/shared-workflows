@@ -157,10 +157,4 @@ jobs:
 
     - name: Deploy to ${{ github.event.inputs.env }} EKS 
       run: |
-        helm upgrade --install ${{ steps.build_env.outputs.repository_name }} \ 
-        -n ${{ steps.build_env.outputs.namespace }} \ 
-        deployment/helm/charts/generic \
-        --set image.tag=${{ steps.build_env.outputs.image_tag }}  \
-        --set image.repository=${{ steps.build_env.outputs.image_repo }} \ 
-        --kube-context=${{ steps.build_env.outputs.cluster_arn }} \ 
-        ${{ steps.build_env.outputs.helm_value_param }} 
+        helm upgrade --install ${{ steps.build_env.outputs.repository_name }} -n ${{ steps.build_env.outputs.namespace }} deployment/helm/charts/generic -set image.tag=${{ steps.build_env.outputs.image_tag }} --set image.repository=${{ steps.build_env.outputs.image_repo }} --kube-context=${{ steps.build_env.outputs.cluster_arn }} ${{ steps.build_env.outputs.helm_value_param }} 

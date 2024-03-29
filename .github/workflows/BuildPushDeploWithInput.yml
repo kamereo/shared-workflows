@@ -74,7 +74,7 @@ jobs:
         echo "image_tag=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
         echo "image_repo=015648027364.dkr.ecr.ap-southeast-1.amazonaws.com/$REPOSITORY_LC" >> "$GITHUB_OUTPUT"
         ## DEPLOY envs
-        echo "cluster_arn=arn:aws:eks:ap-southeast-1:015648027364:cluster/${{github.event.inputs.repo}}" >> "$GITHUB_OUTPUT"
+        echo "cluster_arn=arn:aws:eks:ap-southeast-1:015648027364:cluster/${{github.event.inputs.env}}" >> "$GITHUB_OUTPUT"
         if [ -f deployment_${{ github.event.inputs.env }}.yaml ]; then
           echo "helm_value_param=\"-f deployment.yaml -f deployment_${{ github.event.inputs.env }}.yaml\"" "$GITHUB_OUTPUT"
         else
@@ -157,5 +157,4 @@ jobs:
 
     - name: Deploy to ${{ github.event.inputs.env }} EKS 
       run: |
-        helm history ${{ steps.build_env.outputs.repository_name }} -n ${{ steps.build_env.outputs.namespace }}
-        helm upgrade --install ${{ steps.build_env.outputs.repository_name }} -n ${{ steps.build_env.outputs.namespace }} deployment/helm/charts/generic --set image.tag=${{ steps.build_env.outputs.image_tag }} --set image.repository=${{ steps.build_env.outputs.image_repo }} ${{ steps.build_env.outputs.helm_value_param }} 
+        helm upgrade --install ${{ steps.build_env.outputs.repository_name }} -n ${{ steps.build_env.outputs.namespace }} deployment/helm/charts/generic --set image.tag=${{ steps.build_env.outputs.image_tag }} --set image.repository=${{ steps.build_env.outputs.image_repo }} --kube-context=${{ steps.build_env.outputs.cluster_arn }} ${{ steps.build_env.outputs.helm_value_param }} 

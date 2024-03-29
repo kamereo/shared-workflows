@@ -139,6 +139,12 @@ jobs:
           
         aws ecr create-repository --region ap-southeast-1 --repository-name ${{ steps.build_env.outputs.repository }} --image-tag-mutability IMMUTABLE || true
         docker push ${{ steps.build_env.outputs.image_repo }}:${{ steps.build_env.outputs.image_tag }}
+    
+    - uses: trstringer/manual-approval@v1
+      if: github.event.inputs.env == 'prod'    
+      with:
+        secret: ${{ secrets.GH_TOKEN }}
+        approvers: infrastructure,backend,frontend
 
     - name: Update kubeconfig
       run: |

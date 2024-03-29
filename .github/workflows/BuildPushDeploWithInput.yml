@@ -69,7 +69,7 @@ jobs:
         ls
         ## BUILD envs
         REPOSITORY_LC=$(echo "kamereo/${{ github.event.inputs.repo }}" | tr '[:upper:]' '[:lower:]')
-        echo "repository_name=$(echo $REPOSITORY_LC | cut -d/ -f2)"
+        echo "repository_name=$(echo $REPOSITORY_LC | cut -d/ -f2)" >> "$GITHUB_OUTPUT"
         echo "repository=$REPOSITORY_LC" >> "$GITHUB_OUTPUT" 
         echo "image_tag=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
         echo "image_repo=015648027364.dkr.ecr.ap-southeast-1.amazonaws.com/$REPOSITORY_LC" >> "$GITHUB_OUTPUT"

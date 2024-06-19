@@ -7,20 +7,20 @@ on:
   #     - master
   #     - qa 
   workflow_call:
-    # secrets:
-    #   ACTION_ACCESS_KEY:
-    #     required: true
-    #     description: 'AWS Access Key ID'
-    #   ACTION_ACCESS_SECRET:
-    #     required: true
-    #     description: 'AWS Secret Access Key'
-    #   GH_TOKEN:
-    #     required: true
-    #   BUILD_TOOLS_DEPLOY_KEY:
-    #     required: true
-    #   NPM_TOKEN:
-    #     required: true
-
+    secrets:
+      ACTION_ACCESS_KEY:
+        required: true
+        description: 'AWS Access Key ID'
+      ACTION_ACCESS_SECRET:
+        required: true
+        description: 'AWS Secret Access Key'
+      GH_TOKEN:
+        required: true
+      BUILD_TOOLS_DEPLOY_KEY:
+        required: true
+      NPM_TOKEN:
+        required: true
+        
 jobs:
   build-and-push:
     runs-on: ubuntu-latest

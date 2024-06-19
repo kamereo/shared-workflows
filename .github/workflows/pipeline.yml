@@ -22,15 +22,15 @@ on:
         required: true
         
 jobs:
-  build-and-push:
-    outputs:
-      environment: ${{ steps.build_env.outputs.environment }}
-      repository_name: ${{ steps.build_env.outputs.repository_name }}
-      namespace: ${{ steps.build_env.outputs.namespace }}
-      image_tag: ${{ steps.build_env.outputs.image_tag }}
-      image_repo: "${{ steps.build_env.outputs.image_repo }}"
-      cluster_arn: "${{ steps.build_env.outputs.cluster_arn }}"
-      helm_value_param: "${{ steps.build_env.outputs.helm_value_param }}"
+  build-push-deploy:
+    # outputs:
+    #   environment: ${{ steps.build_env.outputs.environment }}
+    #   repository_name: ${{ steps.build_env.outputs.repository_name }}
+    #   namespace: ${{ steps.build_env.outputs.namespace }}
+    #   image_tag: ${{ steps.build_env.outputs.image_tag }}
+    #   image_repo: "${{ steps.build_env.outputs.image_repo }}"
+    #   cluster_arn: "${{ steps.build_env.outputs.cluster_arn }}"
+    #   helm_value_param: "${{ steps.build_env.outputs.helm_value_param }}"
     runs-on: ubuntu-latest
 
     steps:
@@ -108,35 +108,29 @@ jobs:
         ref: main
         path: build-tools
 
-    # - name: Build and Push Docker Image
-    #   if: steps.image_exists.outputs.exists == 'false'
-    #   run: |
-    #     ## init script 
-    #     cp -r build-tools/gradle-init.d gradle/
-    #     ## build
-    #     docker buildx build --push --pull \
-    #       --cache-to type=gha \
-    #       --cache-from type=gha,mode=max \
-    #       --build-arg AWS_DEFAULT_REGION="ap-southeast-1" \
-    #       --build-arg AWS_ACCESS_KEY_ID=${{ secrets.ACTION_ACCESS_KEY }} \
-    #       --build-arg AWS_SECRET_ACCESS_KEY=${{ secrets.ACTION_ACCESS_SECRET }} \
-    #       --build-arg AWS_SESSION_TOKEN \
-    #       --build-arg NPM_TOKEN=${{ secrets.NPM_TOKEN }} \
-    #       --build-arg APP_ENV=${{ steps.build_env.outputs.environment }} \
-    #       -f ${{ steps.dockerfile.outputs.path }} \
-    #       -t ${{ steps.build_env.outputs.image_repo }}:${{ steps.build_env.outputs.image_tag }} .
+    - name: Build and Push Docker Image
+      if: steps.image_exists.outputs.exists == 'false'
+      run: |
+        ## init script 
+        cp -r build-tools/gradle-init.d gradle/
+        ## build
+        docker buildx build --push --pull \
+          --cache-to type=gha \
+          --cache-from type=gha,mode=max \
+          --build-arg AWS_DEFAULT_REGION="ap-southeast-1" \
+          --build-arg AWS_ACCESS_KEY_ID=${{ secrets.ACTION_ACCESS_KEY }} \
+          --build-arg AWS_SECRET_ACCESS_KEY=${{ secrets.ACTION_ACCESS_SECRET }} \
+          --build-arg AWS_SESSION_TOKEN \
+          --build-arg NPM_TOKEN=${{ secrets.NPM_TOKEN }} \
+          --build-arg APP_ENV=${{ steps.build_env.outputs.environment }} \
+          -f ${{ steps.dockerfile.outputs.path }} \
+          -t ${{ steps.build_env.outputs.image_repo }}:${{ steps.build_env.outputs.image_tag }} .
           
     #     # aws ecr create-repository --region ap-southeast-1 --repository-name ${{ steps.build_env.outputs.repository }} --image-tag-mutability IMMUTABLE || true
     #     # docker push ${{ steps.build_env.outputs.image_repo }}:${{ steps.build_env.outputs.image_tag }}
     
- 
-  deploy:
-    runs-on: ubuntu-latest
-    needs: ['build-and-push']
-
-    steps:
     - uses: trstringer/manual-approval@v1
-      if: needs.build-and-push.outputs.environment == 'prod'    
+      if: steps.build_env.outputs.environment == 'prod'    
       with:
         secret: ${{ secrets.GH_TOKEN }}
         approvers: approver
@@ -158,30 +152,30 @@ jobs:
 
     - name: Update kubeconfig
       run: |
-        aws eks --region ap-southeast-1  update-kubeconfig --name ${{ needs.build-and-push.outputs.environment }}
+        aws eks --region ap-southeast-1  update-kubeconfig --name ${{ steps.build_env.outputs.environment }}
         
     - name: Set up Helm 
       uses: azure/setup-helm@v4.1.0
 
-    - name: Deploy to ${{ needs.build-and-push.outputs.environment }} EKS 
+    - name: Deploy to ${{ steps.build_env.outputs.environment }} EKS 
       run: |
         . deployment/jenkins/helpers/assume_role.sh
         assume_role arn:aws:iam::015648027364:role/CI-deployment GithubActions-${{ github.run_id }}
         # debug cmd
-        echo "helm template ${{ needs.build-and-push.outputs.repository_name }} \
-        -n ${{ needs.build-and-push.outputs.namespace }} \
-        deployment/helm/charts/generic --set image.tag=${{ needs.build-and-push.outputs.image_tag }} \
-        --set image.repository=${{ needs.build-and-push.outputs.image_repo }} \
-        --kube-context=${{ needs.build-and-push.outputs.cluster_arn }} ${{ needs.build-and-push.outputs.helm_value_param }}"
+        echo "helm template ${{ steps.build_env.outputs.repository_name }} \
+        -n ${{ steps.build_env.outputs.namespace }} \
+        deployment/helm/charts/generic --set image.tag=${{ steps.build_env.outputs.image_tag }} \
+        --set image.repository=${{ steps.build_env.outputs.image_repo }} \
+        --kube-context=${{ steps.build_env.outputs.cluster_arn }} ${{ steps.build_env.outputs.helm_value_param }}"
         # debug template
-        helm template ${{ needs.build-and-push.outputs.repository_name }} \
-        -n ${{ needs.build-and-push.outputs.namespace }} \
-        deployment/helm/charts/generic --set image.tag=${{ needs.build-and-push.outputs.image_tag }} \
-        --set image.repository=${{ needs.build-and-push.outputs.image_repo }} \
-        --kube-context=${{ needs.build-and-push.outputs.cluster_arn }} ${{ needs.build-and-push.outputs.helm_value_param }} 
+        helm template ${{ steps.build_env.outputs.repository_name }} \
+        -n ${{ steps.build_env.outputs.namespace }} \
+        deployment/helm/charts/generic --set image.tag=${{ steps.build_env.outputs.image_tag }} \
+        --set image.repository=${{ steps.build_env.outputs.image_repo }} \
+        --kube-context=${{ steps.build_env.outputs.cluster_arn }} ${{ steps.build_env.outputs.helm_value_param }} 
 
-        helm upgrade --install ${{ needs.build-and-push.outputs.repository_name }} \
-        -n ${{ needs.build-and-push.outputs.namespace }} \
-        deployment/helm/charts/generic --set image.tag=${{ needs.build-and-push.outputs.image_tag }} \
-        --set image.repository=${{ needs.build-and-push.outputs.image_repo }} \
-        --kube-context=${{ needs.build-and-push.outputs.cluster_arn }} ${{ needs.build-and-push.outputs.helm_value_param }} 
+        helm upgrade --install ${{ steps.build_env.outputs.repository_name }} \
+        -n ${{ steps.build_env.outputs.namespace }} \
+        deployment/helm/charts/generic --set image.tag=${{ steps.build_env.outputs.image_tag }} \
+        --set image.repository=${{ steps.build_env.outputs.image_repo }} \
+        --kube-context=${{ steps.build_env.outputs.cluster_arn }} ${{ steps.build_env.outputs.helm_value_param }} 

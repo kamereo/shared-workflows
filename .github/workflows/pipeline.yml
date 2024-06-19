@@ -105,19 +105,29 @@ jobs:
       run: |
         ## init script 
         cp -r build-tools/gradle-init.d gradle/
-        ## build
-        docker build --pull \
-          --build-arg AWS_DEFAULT_REGION="ap-southeast-1" \
-          --build-arg AWS_ACCESS_KEY_ID=${{ secrets.ACTION_ACCESS_KEY }} \
-          --build-arg AWS_SECRET_ACCESS_KEY=${{ secrets.ACTION_ACCESS_SECRET }} \
-          --build-arg AWS_SESSION_TOKEN \
-          --build-arg NPM_TOKEN=${{ secrets.NPM_TOKEN }} \
-          --build-arg APP_ENV=${{ steps.build_env.outputs.environment }} \
-          -f ${{ steps.dockerfile.outputs.path }} \
-          -t ${{ steps.build_env.outputs.image_repo }}:${{ steps.build_env.outputs.image_tag }} .
+    #     ## build
+    #     docker build --pull \
+    #       --build-arg AWS_DEFAULT_REGION="ap-southeast-1" \
+    #       --build-arg AWS_ACCESS_KEY_ID=${{ secrets.ACTION_ACCESS_KEY }} \
+    #       --build-arg AWS_SECRET_ACCESS_KEY=${{ secrets.ACTION_ACCESS_SECRET }} \
+    #       --build-arg AWS_SESSION_TOKEN \
+    #       --build-arg NPM_TOKEN=${{ secrets.NPM_TOKEN }} \
+    #       --build-arg APP_ENV=${{ steps.build_env.outputs.environment }} \
+    #       -f ${{ steps.dockerfile.outputs.path }} \
+    #       -t ${{ steps.build_env.outputs.image_repo }}:${{ steps.build_env.outputs.image_tag }} .
           
-        aws ecr create-repository --region ap-southeast-1 --repository-name ${{ steps.build_env.outputs.repository }} --image-tag-mutability IMMUTABLE || true
-        docker push ${{ steps.build_env.outputs.image_repo }}:${{ steps.build_env.outputs.image_tag }}
+    #     aws ecr create-repository --region ap-southeast-1 --repository-name ${{ steps.build_env.outputs.repository }} --image-tag-mutability IMMUTABLE || true
+    #     docker push ${{ steps.build_env.outputs.image_repo }}:${{ steps.build_env.outputs.image_tag }}
+
+    - name: Build and push
+      if: steps.image_exists.outputs.exists == 'false'
+      uses: docker/build-push-action@v6
+      with:
+        context: ${{ steps.dockerfile.outputs.path }}
+        push: true
+        tags: "${{ steps.build_env.outputs.image_repo }}:${{ steps.build_env.outputs.image_tag }}"
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
     
  
   deploy:
@@ -140,7 +150,7 @@ jobs:
 
     - name: Update kubeconfig
       run: |
-        aws eks --region ap-southeast-1  update-kubeconfig --name ${{ steps.build_env.outputs.environment }}
+        aws eks --region ap-southeast-1  update-kubeconfig --name ${{ job.build-and-push.outputs.environment }}
         
     - name: Set up Helm 
       uses: azure/setup-helm@v4.1.0

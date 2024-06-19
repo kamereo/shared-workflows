@@ -9,7 +9,8 @@ on:
   workflow_dispatch:
     inputs:
       run:
-        description: 'Run'     
+        description: 'Run'    
+  workflow_call:      
 
 jobs:
   build-and-push:

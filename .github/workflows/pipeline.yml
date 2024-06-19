@@ -127,7 +127,7 @@ jobs:
     needs: ['build-and-push']
     steps:
     - uses: trstringer/manual-approval@v1
-      if: job.build-and-push.outputs.environment == 'prod'    
+      if: needs.build-and-push.outputs.environment == 'prod'    
       with:
         secret: ${{ secrets.GH_TOKEN }}
         approvers: approver
@@ -142,13 +142,13 @@ jobs:
 
     - name: Update kubeconfig
       run: |
-        aws eks --region ap-southeast-1  update-kubeconfig --name ${{ job.build-and-push.outputs.environment }}
+        aws eks --region ap-southeast-1  update-kubeconfig --name ${{ needs.build-and-push.outputs.environment }}
         
     - name: Set up Helm 
       uses: azure/setup-helm@v4.1.0
 
-    - name: Deploy to ${{ job.build-and-push.outputs.environment }} EKS 
+    - name: Deploy to ${{ needs.build-and-push.outputs.environment }} EKS 
       run: |
         . deployment/jenkins/helpers/assume_role.sh
         assume_role arn:aws:iam::015648027364:role/CI-deployment GithubActions-${{ github.run_id }}
-        helm upgrade --install ${{ job.build-and-push.outputs.repository_name }} -n ${{ job.build-and-push.outputs.namespace }} deployment/helm/charts/generic --set image.tag=${{ job.build-and-push.outputs.image_tag }} --set image.repository=${{ job.build-and-push.outputs.image_repo }} --kube-context=${{ job.build-and-push.outputs.cluster_arn }} ${{ job.build-and-push.outputs.helm_value_param }} 
+        helm upgrade --install ${{ needs.build-and-push.outputs.repository_name }} -n ${{ needs.build-and-push.outputs.namespace }} deployment/helm/charts/generic --set image.tag=${{ needs.build-and-push.outputs.image_tag }} --set image.repository=${{ needs.build-and-push.outputs.image_repo }} --kube-context=${{ needs.build-and-push.outputs.cluster_arn }} ${{ needs.build-and-push.outputs.helm_value_param }} 

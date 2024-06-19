@@ -68,7 +68,7 @@ jobs:
         ## DEPLOY envs
         echo "cluster_arn=arn:aws:eks:ap-southeast-1:015648027364:cluster/$ENV" >> "$GITHUB_OUTPUT"
         if [ -f deployment_$ENV.yaml ]; then
-          echo "helm_value_param=\"-f deployment.yaml -f deployment_$ENV.yaml\"" "$GITHUB_OUTPUT"
+          echo "helm_value_param=\"-f deployment.yaml -f deployment_$ENV.yaml\"" >> "$GITHUB_OUTPUT"
         else
           echo "helm_value_param=\"-f deployment.yaml\"" >> "$GITHUB_OUTPUT"
         fi

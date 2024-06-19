@@ -7,9 +7,6 @@ on:
   #     - master
   #     - qa 
   workflow_dispatch:
-    inputs:
-      run:
-        description: 'Run'    
   workflow_call:      
 
 jobs:

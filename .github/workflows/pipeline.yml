@@ -123,11 +123,18 @@ jobs:
       if: steps.image_exists.outputs.exists == 'false'
       uses: docker/build-push-action@v6
       with:
-        context: ${{ steps.dockerfile.outputs.path }}
+        file: ${{ steps.dockerfile.outputs.path }}
         push: true
         tags: "${{ steps.build_env.outputs.image_repo }}:${{ steps.build_env.outputs.image_tag }}"
         cache-from: type=gha
         cache-to: type=gha,mode=max
+        build-args: |
+          AWS_DEFAULT_REGION="ap-southeast-1" 
+          AWS_ACCESS_KEY_ID=${{ secrets.ACTION_ACCESS_KEY }} 
+          AWS_SECRET_ACCESS_KEY=${{ secrets.ACTION_ACCESS_SECRET }} 
+          AWS_SESSION_TOKEN 
+          NPM_TOKEN=${{ secrets.NPM_TOKEN }} 
+          APP_ENV=${{ steps.build_env.outputs.environment }} 
     
  
   deploy:

@@ -163,7 +163,7 @@ jobs:
         assume_role arn:aws:iam::015648027364:role/CI-deployment GithubActions-${{ github.run_id }}
         # debug cmd
 
-        if [ -f deployment_$ENV.yaml ]; then
+        if [ -f deployment_${{ steps.build_env.outputs.environment }}.yaml ]; then
 
             helm template ${{ steps.build_env.outputs.repository_name }} \
               -n ${{ steps.build_env.outputs.namespace }} \

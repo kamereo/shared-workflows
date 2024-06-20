@@ -6,6 +6,7 @@ on:
   #     - main
   #     - master
   #     - qa 
+  workflow_dispatch:
   workflow_call:
     secrets:
       ACTION_ACCESS_KEY:

@@ -115,7 +115,7 @@ jobs:
         ## init script 
         cp -r build-tools/gradle-init.d gradle/
         ## build
-        docker buildx build --push --pull \
+        docker buildx build --load --push --pull \
           --cache-to type=gha \
           --cache-from type=gha,mode=max \
           --build-arg AWS_DEFAULT_REGION="ap-southeast-1" \

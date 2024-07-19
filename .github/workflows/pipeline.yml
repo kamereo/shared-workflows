@@ -169,26 +169,34 @@ jobs:
 
             helm template ${{ steps.build_env.outputs.repository_name }} \
               -n ${{ steps.build_env.outputs.namespace }} \
-              deployment/helm/charts/generic --set image.tag=${{ steps.build_env.outputs.image_tag }} \
+              deployment/helm/charts/generic \
+              --set image.tag=${{ steps.build_env.outputs.image_tag }} \
               --set image.repository=${{ steps.build_env.outputs.image_repo }} \
+              --set env=${{ steps.build_env.outputs.environment }} \
               --kube-context=${{ steps.build_env.outputs.cluster_arn }} -f deployment.yaml -f deployment_${{ steps.build_env.outputs.environment }}.yaml
 
             helm upgrade --install ${{ steps.build_env.outputs.repository_name }} \
               -n ${{ steps.build_env.outputs.namespace }} \
-              deployment/helm/charts/generic --set image.tag=${{ steps.build_env.outputs.image_tag }} \
+              deployment/helm/charts/generic \
+              --set image.tag=${{ steps.build_env.outputs.image_tag }} \
               --set image.repository=${{ steps.build_env.outputs.image_repo }} \
+              --set env=${{ steps.build_env.outputs.environment }} \
               --kube-context=${{ steps.build_env.outputs.cluster_arn }}  -f deployment.yaml -f deployment_${{ steps.build_env.outputs.environment }}.yaml
         else
 
             helm template ${{ steps.build_env.outputs.repository_name }} \
               -n ${{ steps.build_env.outputs.namespace }} \
-              deployment/helm/charts/generic --set image.tag=${{ steps.build_env.outputs.image_tag }} \
+              deployment/helm/charts/generic \
+              --set image.tag=${{ steps.build_env.outputs.image_tag }} \
               --set image.repository=${{ steps.build_env.outputs.image_repo }} \
+              --set env=${{ steps.build_env.outputs.environment }} \
               --kube-context=${{ steps.build_env.outputs.cluster_arn }} -f deployment.yaml
 
             helm upgrade --install ${{ steps.build_env.outputs.repository_name }} \
               -n ${{ steps.build_env.outputs.namespace }} \
-              deployment/helm/charts/generic --set image.tag=${{ steps.build_env.outputs.image_tag }} \
+              deployment/helm/charts/generic \
+              --set image.tag=${{ steps.build_env.outputs.image_tag }} \
               --set image.repository=${{ steps.build_env.outputs.image_repo }} \
+              --set env=${{ steps.build_env.outputs.environment }} \
               --kube-context=${{ steps.build_env.outputs.cluster_arn }}  -f deployment.yaml
         fi

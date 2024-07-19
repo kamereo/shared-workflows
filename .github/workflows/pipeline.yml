@@ -137,7 +137,7 @@ jobs:
         secret: ${{ secrets.GH_TOKEN }}
         approvers: approver
         minimum-approvals: 1
-        timeout-minutes: 5
+        timeout-minutes: 3
 
     - name: Checkout code
       uses: actions/checkout@v3

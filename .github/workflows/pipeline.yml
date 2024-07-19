@@ -54,7 +54,8 @@ jobs:
     - name: Prepare ENV
       id: build_env
       run: |
-        if [[ ${{ github.ref_name }} =~ '(main|master)' ]]; then
+        BRANCH_NAME=$(echo "${{ github.ref }}" | sed 's|refs/heads/||')
+        if [[ "$BRANCH_NAME" =~ ^(main|master)$ ]]; then
           ENV=prod
         else
           ENV=qa

@@ -133,6 +133,7 @@ jobs:
     
     - uses: trstringer/manual-approval@v1
       if: steps.build_env.outputs.environment == 'prod'    
+      timeout-minutes: 3
       with:
         secret: ${{ secrets.GH_TOKEN }}
         approvers: approver

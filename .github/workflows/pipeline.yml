@@ -136,6 +136,7 @@ jobs:
       with:
         secret: ${{ secrets.GH_TOKEN }}
         approvers: approver
+        minimum-approvals: 1
 
     - name: Checkout code
       uses: actions/checkout@v3

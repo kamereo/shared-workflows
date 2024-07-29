@@ -80,6 +80,15 @@ jobs:
           echo "namespace=kamereo" >> "$GITHUB_OUTPUT"
         fi  
 
+    - uses: trstringer/manual-approval@v1
+      if: steps.build_env.outputs.environment == 'prod'    
+      timeout-minutes: 3
+      with:
+        secret: ${{ secrets.GH_TOKEN }}
+        approvers: approver
+        minimum-approvals: 1
+        timeout-minutes: 3
+
     - name: Check if Docker Image Exists
       id: image_exists
       run: |
@@ -131,15 +140,6 @@ jobs:
     #     # aws ecr create-repository --region ap-southeast-1 --repository-name ${{ steps.build_env.outputs.repository }} --image-tag-mutability IMMUTABLE || true
     #     # docker push ${{ steps.build_env.outputs.image_repo }}:${{ steps.build_env.outputs.image_tag }}
     
-    - uses: trstringer/manual-approval@v1
-      if: steps.build_env.outputs.environment == 'prod'    
-      timeout-minutes: 3
-      with:
-        secret: ${{ secrets.GH_TOKEN }}
-        approvers: approver
-        minimum-approvals: 1
-        timeout-minutes: 3
-
     - name: Checkout code
       uses: actions/checkout@v3
       with:

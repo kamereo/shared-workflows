@@ -147,7 +147,7 @@ jobs:
             unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
         }
         ## assume role
-        assume_role arn:aws:iam::015648027364:role/CI-deployment ${{ github.repository }}_${{ github.run_number }}
+        assume_role arn:aws:iam::015648027364:role/CI-deployment ${{ steps.build_env.outputs.repository_name }}${{ github.run_number }}
 
         ## build
         docker buildx build --push --pull \
@@ -163,7 +163,7 @@ jobs:
           -t ${{ steps.build_env.outputs.image_repo }}:${{ steps.build_env.outputs.image_tag }} .
         ## unassume
         unassume_role
-          
+
     #     # aws ecr create-repository --region ap-southeast-1 --repository-name ${{ steps.build_env.outputs.repository }} --image-tag-mutability IMMUTABLE || true
     #     # docker push ${{ steps.build_env.outputs.image_repo }}:${{ steps.build_env.outputs.image_tag }}
     

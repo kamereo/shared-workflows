@@ -1,14 +1,19 @@
 name: Build and deploy to Kamereo EKS 
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
-      - master
       - qa
+      - qa-*
 
 jobs:
   pipeline:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: kamereo/shared-workflows/.github/workflows/pipeline.yml@main
+    uses: kamereo/shared-workflows/.github/workflows/pipeline.yml@main
+    secrets:
+      ACTION_ACCESS_KEY: ${{ secrets.ACTION_ACCESS_KEY }}
+      ACTION_ACCESS_SECRET: ${{ secrets.ACTION_ACCESS_SECRET }}
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      BUILD_TOOLS_DEPLOY_KEY: ${{ secrets.BUILD_TOOLS_DEPLOY_KEY }}

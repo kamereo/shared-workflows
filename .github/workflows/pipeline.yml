@@ -150,7 +150,7 @@ jobs:
         assume_role arn:aws:iam::015648027364:role/CI-deployment ${{ steps.build_env.outputs.repository_name }}${{ github.run_number }}
 
         ## build
-        docker buildx build --push --pull \
+        docker build --push --pull \
           --cache-to type=gha \
           --cache-from type=gha,mode=max \
           --build-arg AWS_DEFAULT_REGION="ap-southeast-1" \

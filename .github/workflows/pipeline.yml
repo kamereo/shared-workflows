@@ -137,8 +137,8 @@ jobs:
                     --query '[Credentials.AccessKeyId,Credentials.SecretAccessKey,Credentials.SessionToken]' \
                     --output text`)
 
-            export AWS_ACCESS_KEY_ID=${RESULT[@]:0:1}
-            export AWS_SECRET_ACCESS_KEY=${RESULT[@]:1:1}
+            # export AWS_ACCESS_KEY_ID=${RESULT[@]:0:1}
+            # export AWS_SECRET_ACCESS_KEY=${RESULT[@]:1:1}
             export AWS_SESSION_TOKEN=${RESULT[@]:2:1}
             set -x
         }
@@ -154,10 +154,8 @@ jobs:
           --cache-to type=gha \
           --cache-from type=gha,mode=max \
           --build-arg AWS_DEFAULT_REGION="ap-southeast-1" \
-          # --build-arg AWS_ACCESS_KEY_ID=${{ secrets.ACTION_ACCESS_KEY }} \
-          # --build-arg AWS_SECRET_ACCESS_KEY=${{ secrets.ACTION_ACCESS_SECRET }} \
-          --build-arg AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
-          --build-arg AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+          --build-arg AWS_ACCESS_KEY_ID=${{ secrets.ACTION_ACCESS_KEY }} \
+          --build-arg AWS_SECRET_ACCESS_KEY=${{ secrets.ACTION_ACCESS_SECRET }} \
           --build-arg AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN \
           --build-arg NPM_TOKEN=${{ secrets.NPM_TOKEN }} \
           --build-arg APP_ENV=${{ steps.build_env.outputs.environment }} \

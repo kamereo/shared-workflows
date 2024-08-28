@@ -126,6 +126,29 @@ jobs:
       run: |
         ## init script 
         cp -r build-tools/gradle-init.d gradle/
+        ## prepare assume role
+        assume_role() {
+            set +x
+            ROLE_ARN="${1}"
+            SESSIONID="${2}"
+
+            RESULT=(`aws sts assume-role --role-arn $ROLE_ARN \
+                    --role-session-name $SESSIONID \
+                    --query '[Credentials.AccessKeyId,Credentials.SecretAccessKey,Credentials.SessionToken]' \
+                    --output text`)
+
+            export AWS_ACCESS_KEY_ID=${RESULT[@]:0:1}
+            export AWS_SECRET_ACCESS_KEY=${RESULT[@]:1:1}
+            export AWS_SESSION_TOKEN=${RESULT[@]:2:1}
+            set -x
+        }
+
+        unassume_role () {
+            unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
+        }
+        ## assume role
+        assume_role arn:aws:iam::015648027364:role/CI-deployment ${{ github.repository }}_${{ github.run_number }}
+
         ## build
         docker buildx build --push --pull \
           --cache-to type=gha \
@@ -138,6 +161,8 @@ jobs:
           --build-arg APP_ENV=${{ steps.build_env.outputs.environment }} \
           -f ${{ steps.dockerfile.outputs.path }} \
           -t ${{ steps.build_env.outputs.image_repo }}:${{ steps.build_env.outputs.image_tag }} .
+        ## unassume
+        unassume_role
           
     #     # aws ecr create-repository --region ap-southeast-1 --repository-name ${{ steps.build_env.outputs.repository }} --image-tag-mutability IMMUTABLE || true
     #     # docker push ${{ steps.build_env.outputs.image_repo }}:${{ steps.build_env.outputs.image_tag }}

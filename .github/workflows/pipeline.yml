@@ -147,13 +147,14 @@ jobs:
             unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
         }
         ## assume role
+        export AWS_DEFAULT_REGION="ap-southeast-1"
         assume_role arn:aws:iam::015648027364:role/CI-deployment ${{ steps.build_env.outputs.repository_name }}${{ github.run_number }}
 
         ## build
         docker buildx build --push --pull \
           --cache-to type=gha \
           --cache-from type=gha,mode=max \
-          --build-arg AWS_DEFAULT_REGION="ap-southeast-1" \
+          --build-arg AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION \
           --build-arg AWS_ACCESS_KEY_ID=${{ secrets.ACTION_ACCESS_KEY }} \
           --build-arg AWS_SECRET_ACCESS_KEY=${{ secrets.ACTION_ACCESS_SECRET }} \
           --build-arg AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN \
@@ -230,3 +231,13 @@ jobs:
               --set env=${{ steps.build_env.outputs.environment }} \
               --kube-context=${{ steps.build_env.outputs.cluster_arn }}  -f deployment.yaml
         fi
+  slackNotification:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Send Slack Notification
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}

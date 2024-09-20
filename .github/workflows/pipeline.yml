@@ -32,8 +32,8 @@ jobs:
     #   image_repo: "${{ steps.build_env.outputs.image_repo }}"
     #   cluster_arn: "${{ steps.build_env.outputs.cluster_arn }}"
     #   helm_value_param: "${{ steps.build_env.outputs.helm_value_param }}"
-    runs-on: ubuntu-latest
-
+    # runs-on: ubuntu-latest
+    runs-on: kamereo-runner
     steps:
     - name: Checkout code
       uses: actions/checkout@v3

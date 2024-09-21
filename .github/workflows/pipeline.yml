@@ -37,7 +37,10 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
-      
+    - name: Install
+      run: |
+        sudo apt-get update
+        sudo apt-get install awscli git -y  
     - name: Prepare ENV
       id: build_env
       run: |
@@ -81,10 +84,7 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v1
 
-    - name: Install
-      run: |
-        sudo apt-get update
-        sudo apt-get install awscli git -y
+
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:

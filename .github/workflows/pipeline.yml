@@ -40,7 +40,6 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install awscli git -y  
-
     - name: Checkout code
       uses: actions/checkout@v3
     - name: Prepare ENV

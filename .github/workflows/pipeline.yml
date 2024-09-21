@@ -35,12 +35,14 @@ jobs:
     # runs-on: ubuntu-latest
     runs-on: kamereo-runner
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+
     - name: Install
       run: |
         sudo apt-get update
         sudo apt-get install awscli git -y  
+
+    - name: Checkout code
+      uses: actions/checkout@v3
     - name: Prepare ENV
       id: build_env
       run: |

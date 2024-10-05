@@ -121,7 +121,7 @@ jobs:
     - name: Checkout build-tools
       uses: actions/checkout@v3
       with:
-        ssh-key: ${{ secrets.BUILD_TOOLS_DEPLOY_KEY }}
+        # ssh-key: ${{ secrets.BUILD_TOOLS_DEPLOY_KEY }}
         repository: 'kamereo/build-tools'
         ref: main
         path: build-tools

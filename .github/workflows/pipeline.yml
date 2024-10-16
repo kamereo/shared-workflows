@@ -21,21 +21,23 @@ on:
         required: true
       NPM_TOKEN:
         required: true
-        
-jobs:
-  build-push-deploy:
-    # outputs:
-    #   environment: ${{ steps.build_env.outputs.environment }}
-    #   repository_name: ${{ steps.build_env.outputs.repository_name }}
-    #   namespace: ${{ steps.build_env.outputs.namespace }}
-    #   image_tag: ${{ steps.build_env.outputs.image_tag }}
-    #   image_repo: "${{ steps.build_env.outputs.image_repo }}"
-    #   cluster_arn: "${{ steps.build_env.outputs.cluster_arn }}"
-    #   helm_value_param: "${{ steps.build_env.outputs.helm_value_param }}"
-    # runs-on: ubuntu-latest
-    runs-on: kamereo-runner
-    steps:
+env:
+  KANIKO_CACHE_ARGS: "--cache=true --cache-copy-layers=true --cache-ttl=24h"
 
+jobs:
+  prepare:
+    runs-on: kamereo-runner
+    outputs:
+      environment: ${{ steps.build_env.outputs.environment }}
+      repository_name: ${{ steps.build_env.outputs.repository_name }}
+      repository: ${{ steps.build_env.outputs.repository }}
+      namespace: ${{ steps.build_env.outputs.namespace }}
+      image_tag: ${{ steps.build_env.outputs.image_tag }}
+      image_repo: "${{ steps.build_env.outputs.image_repo }}"
+      cluster_arn: "${{ steps.build_env.outputs.cluster_arn }}"
+      helm_value_param: "${{ steps.build_env.outputs.helm_value_param }}"
+      dockerfile_path: "${{ steps.dockerfile.outputs.dockerfile_path }}"
+    steps:
     - name: Install
       run: |
         sudo apt-get update
@@ -71,31 +73,6 @@ jobs:
           echo "namespace=kamereo" >> "$GITHUB_OUTPUT"
         fi  
 
-    - uses: trstringer/manual-approval@v1
-      if: steps.build_env.outputs.environment == 'prod'    
-      timeout-minutes: 3
-      with:
-        secret: ${{ secrets.GH_TOKEN }}
-        approvers: approver
-        minimum-approvals: 1
-        timeout-minutes: 3
-
-
-
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v1
-
-
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.ACTION_ACCESS_KEY }}
-        aws-secret-access-key: ${{ secrets.ACTION_ACCESS_SECRET }}
-        aws-region: 'ap-southeast-1'
-    
-    - name: Login to Amazon ECR
-      run: aws ecr get-login-password --region ap-southeast-1 | docker login --username AWS --password-stdin 015648027364.dkr.ecr.ap-southeast-1.amazonaws.com
-
     - name: Check if Docker Image Exists
       id: image_exists
       run: |
@@ -113,130 +90,252 @@ jobs:
       id: dockerfile
       run: |
         if [ -f Dockerfile_${{ steps.build_env.outputs.environment }} ]; then
-          echo "path=Dockerfile_${{ steps.build_env.outputs.environment }}" >> "$GITHUB_OUTPUT"
+          echo "dockerfile_path=Dockerfile_${{ steps.build_env.outputs.environment }}" >> "$GITHUB_OUTPUT"
         else
-          echo "path=Dockerfile" >> "$GITHUB_OUTPUT"
+          echo "dockerfile_path=Dockerfile" >> "$GITHUB_OUTPUT"
         fi
 
-    - name: Checkout build-tools
-      uses: actions/checkout@v3
-      with:
-        token: ${{ secrets.GH_TOKEN }}
-        # ssh-key: ${{ secrets.BUILD_TOOLS_DEPLOY_KEY }}
-        repository: 'kamereo/build-tools'
-        ref: main
-        path: build-tools
+  build-to-acr:
+    runs-on: kamereo-runner # uses self-hosted runner scale set
+    container:
+      image: gcr.io/kaniko-project/executor:v1.20.0-debug # the kaniko image
+    permissions:
+      contents: read # read the repository
 
-    - name: Build and Push Docker Image
-      if: steps.image_exists.outputs.exists == 'false'
-      run: |
-        ## init script 
-        cp -r build-tools/gradle-init.d gradle/
-        ## prepare assume role
-        assume_role() {
-            set +x
-            ROLE_ARN="${1}"
-            SESSIONID="${2}"
+    steps:
+      - name: Build and Push Image to ACR with kaniko
+        run: |
+          echo "{\"credsStore\":\"ecr-login\"}" > /kaniko/.docker/config.json
 
-            RESULT=(`aws sts assume-role --role-arn $ROLE_ARN \
-                    --role-session-name $SESSIONID \
-                    --query '[Credentials.AccessKeyId,Credentials.SecretAccessKey,Credentials.SessionToken]' \
-                    --output text`)
+          /kaniko/executor --dockerfile="$DOCKER_PATH" \
+            --context="${{ github.repositoryUrl }}#${{ github.ref }}#${{ github.sha }}"  \
+            --destination="$IMAGE_REPO:$IMAGE_TAG" \
+            ${{ env.KANIKO_CACHE_ARGS }} \
+            --push-retry 5 
+        env:  # needed to auth to github and download the repo and to authenticate to ACR via Azure Service Principal
+          AWS_ACCESS_KEY_ID: ${{ secrets.ACTION_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.ACTION_ACCESS_SECRET }}
+          # GIT_USERNAME: ${{ github.actor }}
+          # GIT_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+          DOCKER_PATH: ${{ needs.prepare.outputs.dockerfile_path }}
+          IMAGE_REPO: ${{ needs.prepare.outputs.image_repo }}
+          IMAGE_TAG: ${{ needs.prepare.outputs.image_tag }}
 
-            export AWS_ACCESS_KEY_ID=${RESULT[@]:0:1}
-            export AWS_SECRET_ACCESS_KEY=${RESULT[@]:1:1}
-            export AWS_SESSION_TOKEN=${RESULT[@]:2:1}
-            set -x
-        }
 
-        unassume_role () {
-            unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
-        }
-        ## assume role
-        export AWS_DEFAULT_REGION="ap-southeast-1"
-        assume_role arn:aws:iam::015648027364:role/CI-deployment ${{ steps.build_env.outputs.repository_name }}${{ github.run_number }}
+  # build-push-deploy:
+  #   # outputs:
+  #   #   environment: ${{ steps.build_env.outputs.environment }}
+  #   #   repository_name: ${{ steps.build_env.outputs.repository_name }}
+  #   #   namespace: ${{ steps.build_env.outputs.namespace }}
+  #   #   image_tag: ${{ steps.build_env.outputs.image_tag }}
+  #   #   image_repo: "${{ steps.build_env.outputs.image_repo }}"
+  #   #   cluster_arn: "${{ steps.build_env.outputs.cluster_arn }}"
+  #   #   helm_value_param: "${{ steps.build_env.outputs.helm_value_param }}"
+  #   # runs-on: ubuntu-latest
+  #   runs-on: kamereo-runner
+  #   steps:
 
-        ## build
-        docker buildx build --push --pull --memory="2g" --memory-swap="4g"  \
-          --cache-to type=gha \
-          --cache-from type=gha,mode=max \
-          --build-arg AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION \
-          --build-arg AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID\
-          --build-arg AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY\
-          --build-arg AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN \
-          --build-arg NPM_TOKEN=${{ secrets.NPM_TOKEN }} \
-          --build-arg APP_ENV=${{ steps.build_env.outputs.environment }} \
-          -f ${{ steps.dockerfile.outputs.path }} \
-          -t ${{ steps.build_env.outputs.image_repo }}:${{ steps.build_env.outputs.image_tag }} .
-        ## unassume
-        unassume_role
+  #   - name: Install
+  #     run: |
+  #       sudo apt-get update
+  #       sudo apt-get install awscli git -y  
+  #   - name: Checkout code
+  #     uses: actions/checkout@v3
+  #   - name: Prepare ENV
+  #     id: build_env
+  #     run: |
+  #       BRANCH_NAME=$(echo "${{ github.ref }}" | sed 's|refs/heads/||')
+  #       if [[ "$BRANCH_NAME" =~ ^(main|master)$ ]]; then
+  #         ENV=prod
+  #       else
+  #         ENV=qa
+  #       fi
+  #       echo "environment=$ENV" >> "$GITHUB_OUTPUT"
+  #       ## BUILD envs
+  #       REPOSITORY_LC=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+  #       echo "repository_name=$(echo $REPOSITORY_LC | cut -d/ -f2)" >> "$GITHUB_OUTPUT"
+  #       echo "repository=$REPOSITORY_LC" >> "$GITHUB_OUTPUT" 
+  #       echo "image_tag=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+  #       echo "image_repo=015648027364.dkr.ecr.ap-southeast-1.amazonaws.com/$REPOSITORY_LC" >> "$GITHUB_OUTPUT"
+  #       ## DEPLOY envs
+  #       echo "cluster_arn=arn:aws:eks:ap-southeast-1:015648027364:cluster/$ENV" >> "$GITHUB_OUTPUT"
+  #       if [ -f deployment_$ENV.yaml ]; then
+  #         echo "helm_value_param=\"-f deployment.yaml -f deployment_$ENV.yaml\"" >> "$GITHUB_OUTPUT"
+  #       else
+  #         echo "helm_value_param=\"-f deployment.yaml\"" >> "$GITHUB_OUTPUT"
+  #       fi
+  #       if [[ "$REPOSITORY_LC" =~ "internal" ]]; then
+  #         echo "namespace=internal" >> "$GITHUB_OUTPUT"
+  #       else
+  #         echo "namespace=kamereo" >> "$GITHUB_OUTPUT"
+  #       fi  
 
-    #     # aws ecr create-repository --region ap-southeast-1 --repository-name ${{ steps.build_env.outputs.repository }} --image-tag-mutability IMMUTABLE || true
-    #     # docker push ${{ steps.build_env.outputs.image_repo }}:${{ steps.build_env.outputs.image_tag }}
+  #   - uses: trstringer/manual-approval@v1
+  #     if: steps.build_env.outputs.environment == 'prod'    
+  #     timeout-minutes: 3
+  #     with:
+  #       secret: ${{ secrets.GH_TOKEN }}
+  #       approvers: approver
+  #       minimum-approvals: 1
+  #       timeout-minutes: 3
+
+
+
+  #   - name: Set up Docker Buildx
+  #     uses: docker/setup-buildx-action@v1
+
+
+  #   - name: Configure AWS Credentials
+  #     uses: aws-actions/configure-aws-credentials@v4
+  #     with:
+  #       aws-access-key-id: ${{ secrets.ACTION_ACCESS_KEY }}
+  #       aws-secret-access-key: ${{ secrets.ACTION_ACCESS_SECRET }}
+  #       aws-region: 'ap-southeast-1'
     
-    - name: Checkout code
-      uses: actions/checkout@v3
-      with:
-        token: ${{ secrets.GH_TOKEN }}
-        repository: 'kamereo/deployment'
-        ref: master
-        path: deployment   
+  #   - name: Login to Amazon ECR
+  #     run: aws ecr get-login-password --region ap-southeast-1 | docker login --username AWS --password-stdin 015648027364.dkr.ecr.ap-southeast-1.amazonaws.com
 
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.ACTION_ACCESS_KEY }}
-        aws-secret-access-key: ${{ secrets.ACTION_ACCESS_SECRET }}
-        aws-region: 'ap-southeast-1' 
+  #   - name: Check if Docker Image Exists
+  #     id: image_exists
+  #     run: |
 
-    - name: Update kubeconfig
-      run: |
-        aws eks --region ap-southeast-1  update-kubeconfig --name ${{ steps.build_env.outputs.environment }}
+  #       if aws ecr describe-images --repository-name ${{ steps.build_env.outputs.repository }} --image-ids imageTag=${{ steps.build_env.outputs.image_tag }} --region ap-southeast-1; then
+  #         echo "Image exists. Skipping build."
+  #         echo "exists=true" >> "$GITHUB_OUTPUT"
+  #       else
+  #         echo "Image does not exist. Proceeding with build."
+  #         echo "exists=false" >> "$GITHUB_OUTPUT"
+  #       fi
+
+  #   - name: Determine Dockerfile
+  #     if: steps.image_exists.outputs.exists == 'false'
+  #     id: dockerfile
+  #     run: |
+  #       if [ -f Dockerfile_${{ steps.build_env.outputs.environment }} ]; then
+  #         echo "path=Dockerfile_${{ steps.build_env.outputs.environment }}" >> "$GITHUB_OUTPUT"
+  #       else
+  #         echo "path=Dockerfile" >> "$GITHUB_OUTPUT"
+  #       fi
+
+  #   - name: Checkout build-tools
+  #     uses: actions/checkout@v3
+  #     with:
+  #       token: ${{ secrets.GH_TOKEN }}
+  #       # ssh-key: ${{ secrets.BUILD_TOOLS_DEPLOY_KEY }}
+  #       repository: 'kamereo/build-tools'
+  #       ref: main
+  #       path: build-tools
+
+  #   - name: Build and Push Docker Image
+  #     if: steps.image_exists.outputs.exists == 'false'
+  #     run: |
+  #       ## init script 
+  #       cp -r build-tools/gradle-init.d gradle/
+  #       ## prepare assume role
+  #       assume_role() {
+  #           set +x
+  #           ROLE_ARN="${1}"
+  #           SESSIONID="${2}"
+
+  #           RESULT=(`aws sts assume-role --role-arn $ROLE_ARN \
+  #                   --role-session-name $SESSIONID \
+  #                   --query '[Credentials.AccessKeyId,Credentials.SecretAccessKey,Credentials.SessionToken]' \
+  #                   --output text`)
+
+  #           export AWS_ACCESS_KEY_ID=${RESULT[@]:0:1}
+  #           export AWS_SECRET_ACCESS_KEY=${RESULT[@]:1:1}
+  #           export AWS_SESSION_TOKEN=${RESULT[@]:2:1}
+  #           set -x
+  #       }
+
+  #       unassume_role () {
+  #           unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
+  #       }
+  #       ## assume role
+  #       export AWS_DEFAULT_REGION="ap-southeast-1"
+  #       assume_role arn:aws:iam::015648027364:role/CI-deployment ${{ steps.build_env.outputs.repository_name }}${{ github.run_number }}
+
+  #       ## build
+  #       docker buildx build --push --pull --memory="2g" --memory-swap="4g"  \
+  #         --cache-to type=gha \
+  #         --cache-from type=gha,mode=max \
+  #         --build-arg AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION \
+  #         --build-arg AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID\
+  #         --build-arg AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY\
+  #         --build-arg AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN \
+  #         --build-arg NPM_TOKEN=${{ secrets.NPM_TOKEN }} \
+  #         --build-arg APP_ENV=${{ steps.build_env.outputs.environment }} \
+  #         -f ${{ steps.dockerfile.outputs.path }} \
+  #         -t ${{ steps.build_env.outputs.image_repo }}:${{ steps.build_env.outputs.image_tag }} .
+  #       ## unassume
+  #       unassume_role
+
+  #   #     # aws ecr create-repository --region ap-southeast-1 --repository-name ${{ steps.build_env.outputs.repository }} --image-tag-mutability IMMUTABLE || true
+  #   #     # docker push ${{ steps.build_env.outputs.image_repo }}:${{ steps.build_env.outputs.image_tag }}
+    
+  #   - name: Checkout code
+  #     uses: actions/checkout@v3
+  #     with:
+  #       token: ${{ secrets.GH_TOKEN }}
+  #       repository: 'kamereo/deployment'
+  #       ref: master
+  #       path: deployment   
+
+  #   - name: Configure AWS Credentials
+  #     uses: aws-actions/configure-aws-credentials@v4
+  #     with:
+  #       aws-access-key-id: ${{ secrets.ACTION_ACCESS_KEY }}
+  #       aws-secret-access-key: ${{ secrets.ACTION_ACCESS_SECRET }}
+  #       aws-region: 'ap-southeast-1' 
+
+  #   - name: Update kubeconfig
+  #     run: |
+  #       aws eks --region ap-southeast-1  update-kubeconfig --name ${{ steps.build_env.outputs.environment }}
         
-    - name: Set up Helm 
-      uses: azure/setup-helm@v4.1.0
+  #   - name: Set up Helm 
+  #     uses: azure/setup-helm@v4.1.0
 
-    - name: Deploy to ${{ steps.build_env.outputs.environment }} EKS 
-      run: |
-        . deployment/jenkins/helpers/assume_role.sh
-        assume_role arn:aws:iam::015648027364:role/CI-deployment GithubActions-${{ github.run_id }}
-        # debug cmd
+  #   - name: Deploy to ${{ steps.build_env.outputs.environment }} EKS 
+  #     run: |
+  #       . deployment/jenkins/helpers/assume_role.sh
+  #       assume_role arn:aws:iam::015648027364:role/CI-deployment GithubActions-${{ github.run_id }}
+  #       # debug cmd
 
-        if [ -f deployment_${{ steps.build_env.outputs.environment }}.yaml ]; then
+  #       if [ -f deployment_${{ steps.build_env.outputs.environment }}.yaml ]; then
 
-            helm template ${{ steps.build_env.outputs.repository_name }} \
-              -n ${{ steps.build_env.outputs.namespace }} \
-              deployment/helm/charts/generic \
-              --set image.tag=${{ steps.build_env.outputs.image_tag }} \
-              --set image.repository=${{ steps.build_env.outputs.image_repo }} \
-              --set env=${{ steps.build_env.outputs.environment }} \
-              --kube-context=${{ steps.build_env.outputs.cluster_arn }} -f deployment.yaml -f deployment_${{ steps.build_env.outputs.environment }}.yaml
+  #           helm template ${{ steps.build_env.outputs.repository_name }} \
+  #             -n ${{ steps.build_env.outputs.namespace }} \
+  #             deployment/helm/charts/generic \
+  #             --set image.tag=${{ steps.build_env.outputs.image_tag }} \
+  #             --set image.repository=${{ steps.build_env.outputs.image_repo }} \
+  #             --set env=${{ steps.build_env.outputs.environment }} \
+  #             --kube-context=${{ steps.build_env.outputs.cluster_arn }} -f deployment.yaml -f deployment_${{ steps.build_env.outputs.environment }}.yaml
 
-            helm upgrade --install ${{ steps.build_env.outputs.repository_name }} \
-              -n ${{ steps.build_env.outputs.namespace }} \
-              deployment/helm/charts/generic \
-              --set image.tag=${{ steps.build_env.outputs.image_tag }} \
-              --set image.repository=${{ steps.build_env.outputs.image_repo }} \
-              --set env=${{ steps.build_env.outputs.environment }} \
-              --kube-context=${{ steps.build_env.outputs.cluster_arn }}  -f deployment.yaml -f deployment_${{ steps.build_env.outputs.environment }}.yaml
-        else
+  #           helm upgrade --install ${{ steps.build_env.outputs.repository_name }} \
+  #             -n ${{ steps.build_env.outputs.namespace }} \
+  #             deployment/helm/charts/generic \
+  #             --set image.tag=${{ steps.build_env.outputs.image_tag }} \
+  #             --set image.repository=${{ steps.build_env.outputs.image_repo }} \
+  #             --set env=${{ steps.build_env.outputs.environment }} \
+  #             --kube-context=${{ steps.build_env.outputs.cluster_arn }}  -f deployment.yaml -f deployment_${{ steps.build_env.outputs.environment }}.yaml
+  #       else
 
-            helm template ${{ steps.build_env.outputs.repository_name }} \
-              -n ${{ steps.build_env.outputs.namespace }} \
-              deployment/helm/charts/generic \
-              --set image.tag=${{ steps.build_env.outputs.image_tag }} \
-              --set image.repository=${{ steps.build_env.outputs.image_repo }} \
-              --set env=${{ steps.build_env.outputs.environment }} \
-              --kube-context=${{ steps.build_env.outputs.cluster_arn }} -f deployment.yaml
+  #           helm template ${{ steps.build_env.outputs.repository_name }} \
+  #             -n ${{ steps.build_env.outputs.namespace }} \
+  #             deployment/helm/charts/generic \
+  #             --set image.tag=${{ steps.build_env.outputs.image_tag }} \
+  #             --set image.repository=${{ steps.build_env.outputs.image_repo }} \
+  #             --set env=${{ steps.build_env.outputs.environment }} \
+  #             --kube-context=${{ steps.build_env.outputs.cluster_arn }} -f deployment.yaml
 
-            helm upgrade --install ${{ steps.build_env.outputs.repository_name }} \
-              -n ${{ steps.build_env.outputs.namespace }} \
-              deployment/helm/charts/generic \
-              --set image.tag=${{ steps.build_env.outputs.image_tag }} \
-              --set image.repository=${{ steps.build_env.outputs.image_repo }} \
-              --set env=${{ steps.build_env.outputs.environment }} \
-              --kube-context=${{ steps.build_env.outputs.cluster_arn }}  -f deployment.yaml
-        fi
+  #           helm upgrade --install ${{ steps.build_env.outputs.repository_name }} \
+  #             -n ${{ steps.build_env.outputs.namespace }} \
+  #             deployment/helm/charts/generic \
+  #             --set image.tag=${{ steps.build_env.outputs.image_tag }} \
+  #             --set image.repository=${{ steps.build_env.outputs.image_repo }} \
+  #             --set env=${{ steps.build_env.outputs.environment }} \
+  #             --kube-context=${{ steps.build_env.outputs.cluster_arn }}  -f deployment.yaml
+  #       fi
   # slackNotification:
   #   runs-on: ubuntu-latest
   #   steps:

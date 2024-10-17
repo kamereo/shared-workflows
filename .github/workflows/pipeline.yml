@@ -27,7 +27,8 @@ env:
 jobs:
   prepare:
     runs-on: kamereo-runner
-    container: ghcr.io/actions/actions-runner:latest
+    container:
+      image: ghcr.io/actions/actions-runner:latest
     outputs:
       environment: ${{ steps.build_env.outputs.environment }}
       repository_name: ${{ steps.build_env.outputs.repository_name }}
@@ -72,7 +73,6 @@ jobs:
           echo "namespace=kamereo" >> "$GITHUB_OUTPUT"
         fi
         
-
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:

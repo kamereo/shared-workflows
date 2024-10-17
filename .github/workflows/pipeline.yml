@@ -40,13 +40,16 @@ jobs:
       dockerfile_path: "${{ steps.dockerfile.outputs.dockerfile_path }}"
       exists: "${{ steps.dockerfile.image_exists.exists }}"
     steps:
+    - name: Install
+      run: |
+        sudo apt-get update
+        sudo apt-get install awscli git -y  
     - name: Checkout code
       uses: actions/checkout@v3
     - name: Prepare ENV
       id: build_env
       run: |
         BRANCH_NAME=$(echo "${{ github.ref }}" | sed 's|refs/heads/||')
-        echo debug
         if [[ "$BRANCH_NAME" =~ ^(main|master)$ ]]; then
           ENV=prod
         else

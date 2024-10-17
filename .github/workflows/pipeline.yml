@@ -27,8 +27,7 @@ env:
 jobs:
   prepare:
     runs-on: kamereo-runner
-    container: 
-      image: ghcr.io/actions/actions-runner:latest
+    container: runner
     outputs:
       environment: ${{ steps.build_env.outputs.environment }}
       repository_name: ${{ steps.build_env.outputs.repository_name }}

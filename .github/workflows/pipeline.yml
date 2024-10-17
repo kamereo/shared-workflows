@@ -48,11 +48,8 @@ jobs:
         BRANCH_NAME=$(echo "${{ github.ref }}" | sed 's|refs/heads/||')
         echo debug1
         echo $BRANCH_NAME
-        if [[ "$BRANCH_NAME" =~ ^(main|master)$ ]]; then
-          ENV=prod
-        else
-          ENV=qa
-        fi
+        [[ "$BRANCH_NAME" =~ ^(main|master)$ ]] && ENV=prod || echo ENV=qa
+
         echo "environment=$ENV" >> "$GITHUB_OUTPUT"
         ## BUILD envs
         REPOSITORY_LC=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')

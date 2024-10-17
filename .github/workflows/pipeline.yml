@@ -102,15 +102,12 @@ jobs:
           echo "dockerfile_path=Dockerfile" >> "$GITHUB_OUTPUT"
         fi
     
-    - name: Validate the Output
-      run: |
-        cat "$GITHUB_OUTPUT"
 
 
 
   build-to-ecr:
     needs: prepare
-    if: needs.prepare.outputs.exists == 'false' 
+    # if: needs.prepare.outputs.exists == 'false' 
     runs-on: kamereo-runner # uses self-hosted runner scale set
     container:
       image: gcr.io/kaniko-project/executor:v1.20.0 # the kaniko image
@@ -118,6 +115,9 @@ jobs:
       contents: read # read the repository
 
     steps:
+      - name: Get outputs from first job
+        run: |
+          echo "Output : ${{ needs.prepare.outputs }}"
       - name: Checkout code
         uses: actions/checkout@v3
       - name: Checkout build-tools

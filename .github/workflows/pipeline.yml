@@ -37,11 +37,12 @@ jobs:
       cluster_arn: "${{ steps.build_env.outputs.cluster_arn }}"
       helm_value_param: "${{ steps.build_env.outputs.helm_value_param }}"
       dockerfile_path: "${{ steps.dockerfile.outputs.dockerfile_path }}"
+      exists: "${{ steps.dockerfile.image_exists.exists }}"
     steps:
-    - name: Install
-      run: |
-        sudo apt-get update
-        sudo apt-get install awscli git -y  
+    # - name: Install
+    #   run: |
+    #     sudo apt-get update
+    #     sudo apt-get install awscli git -y  
     - name: Checkout code
       uses: actions/checkout@v3
     - name: Prepare ENV
@@ -104,24 +105,27 @@ jobs:
 
   build-to-ecr:
     needs: prepare
+    if: needs.prepare.outputs.exists == 'false' 
     runs-on: kamereo-runner # uses self-hosted runner scale set
     container:
-      image: gcr.io/kaniko-project/executor:v1.20.0-debug # the kaniko image
+      image: gcr.io/kaniko-project/executor:v1.20.0 # the kaniko image
     permissions:
       contents: read # read the repository
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
       - name: Checkout build-tools
         uses: actions/checkout@v3
         with:
           token: ${{ secrets.GH_TOKEN }}
-          # ssh-key: ${{ secrets.BUILD_TOOLS_DEPLOY_KEY }}
           repository: 'kamereo/build-tools'
           ref: main
           path: build-tools
       - name: Build and Push Image to ACR with kaniko
         run: |
           cp -r build-tools/gradle-init.d gradle/
+
           echo "{\"credsStore\":\"ecr-login\"}" > /kaniko/.docker/config.json
 
           /kaniko/executor --dockerfile="$DOCKER_PATH" \

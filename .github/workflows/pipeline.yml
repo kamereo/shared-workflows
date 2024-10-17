@@ -71,7 +71,7 @@ jobs:
         else
           echo "namespace=kamereo" >> "$GITHUB_OUTPUT"
         fi
-        cat "$GITHUB_OUTPUT"
+        
 
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v4
@@ -101,6 +101,10 @@ jobs:
         else
           echo "dockerfile_path=Dockerfile" >> "$GITHUB_OUTPUT"
         fi
+    
+    - name: Validate the Output
+      run: |
+        cat "$GITHUB_OUTPUT"
 
 
 

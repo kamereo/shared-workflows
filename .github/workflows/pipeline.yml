@@ -104,11 +104,10 @@ jobs:
 
   build-to-ecr:
     needs: prepare
-    if: needs.prepare.outputs.exists == 'false' 
+    # if: needs.prepare.outputs.exists == 'false' 
     runs-on: kamereo-runner # uses self-hosted runner scale set
     container:
       image: gcr.io/kaniko-project/executor:latest # the kaniko image
-
     steps:
       - name: Get outputs from first job
         run: |

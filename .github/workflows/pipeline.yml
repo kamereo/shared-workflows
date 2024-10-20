@@ -103,9 +103,8 @@ jobs:
     # if: needs.prepare.outputs.exists == 'false' 
     runs-on: kamereo-runner # uses self-hosted runner scale set
     container:
-      image: ghcr.io/actions/actions-runner:latest
-
-      # image: gcr.io/kaniko-project/executor:latest # the kaniko image
+    
+      image: gcr.io/kaniko-project/executor:latest # the kaniko image
     steps:
       - name: Get outputs from first job
         run: |

@@ -27,8 +27,8 @@ env:
 jobs:
   prepare:
     runs-on: kamereo-runner
-    container:
-      image: ghcr.io/actions/actions-runner:latest
+    # container:
+    #   image: ghcr.io/actions/actions-runner:latest
     outputs:
       environment: ${{ steps.build_env.outputs.environment }}
       repository_name: ${{ steps.build_env.outputs.repository_name }}
@@ -106,8 +106,8 @@ jobs:
     needs: prepare
     # if: needs.prepare.outputs.exists == 'false' 
     runs-on: kamereo-runner # uses self-hosted runner scale set
-    container:
-      image: gcr.io/kaniko-project/executor:latest # the kaniko image
+    # container:
+    #   image: gcr.io/kaniko-project/executor:latest # the kaniko image
 
     steps:
       - name: Get outputs from first job

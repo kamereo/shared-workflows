@@ -41,10 +41,6 @@ jobs:
       dockerfile_path: "${{ steps.dockerfile.outputs.dockerfile_path }}"
       exists: "${{ steps.dockerfile.image_exists.exists }}"
     steps:
-    - name: Install
-      run: |
-        sudo apt-get update
-        sudo apt-get install awscli -y  
     - name: Checkout code
       uses: actions/checkout@v3
     - name: Prepare ENV
@@ -107,7 +103,9 @@ jobs:
     # if: needs.prepare.outputs.exists == 'false' 
     runs-on: kamereo-runner # uses self-hosted runner scale set
     container:
-      image: gcr.io/kaniko-project/executor:latest # the kaniko image
+      image: ghcr.io/actions/actions-runner:latest
+
+      # image: gcr.io/kaniko-project/executor:latest # the kaniko image
     steps:
       - name: Get outputs from first job
         run: |

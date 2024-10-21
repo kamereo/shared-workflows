@@ -151,7 +151,7 @@ jobs:
 
         ## build
         DOCKER_BUILDKIT=1
-        docker build --push --pull --memory="2g" --memory-swap="4g"  \
+        docker build --pull --memory="2g" --memory-swap="4g"  \
           --build-arg AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION \
           --build-arg AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID\
           --build-arg AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY\
@@ -163,8 +163,8 @@ jobs:
         ## unassume
         unassume_role
 
-    #     # aws ecr create-repository --region ap-southeast-1 --repository-name ${{ steps.build_env.outputs.repository }} --image-tag-mutability IMMUTABLE || true
-    #     # docker push ${{ steps.build_env.outputs.image_repo }}:${{ steps.build_env.outputs.image_tag }}
+        aws ecr create-repository --region ap-southeast-1 --repository-name ${{ steps.build_env.outputs.repository }} --image-tag-mutability IMMUTABLE || true
+        docker push ${{ steps.build_env.outputs.image_repo }}:${{ steps.build_env.outputs.image_tag }}
     
     - name: Checkout code
       uses: actions/checkout@v3
